@@ -1,0 +1,31 @@
+﻿=============================================================================
+GuardMind TRL 4 Verification — Reproducible Test Log
+Generated : 2026-10-22 12:25:04 +05:30
+Git Commit: 41e01d599f0ec9abc4f10aff1ff7603540fec6f9
+Python    : Python 3.14.2
+Platform  : Microsoft Windows NT 10.0.26300.0
+=============================================================================
+
+============================= test session starts =============================
+platform win32 -- Python 3.14.2, pytest-9.1.1, pluggy-1.6.0 -- C:\Users\CHARLESJK\OneDrive\Desktop\files (10)\lba-agent-guardrail-starter\lba-agent-guardrail-starter\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\CHARLESJK\OneDrive\Desktop\files (10)\lba-agent-guardrail-starter\lba-agent-guardrail-starter
+configfile: pytest.ini
+plugins: anyio-4.15.1, langsmith-0.14.5
+collecting ... collected 13 items
+
+tests/test_agents.py::test_solvable_agent_detects_success PASSED         [  7%]
+tests/test_agents.py::test_impossible_agent_never_reports_success PASSED [ 15%]
+tests/test_agents.py::test_llm_agent_can_be_instantiated_and_act_smoke PASSED [ 23%]
+tests/test_agents.py::test_llm_agent_uses_current_deterministic_groq_model PASSED [ 30%]
+tests/test_automaton.py::test_no_repeat_never_halts PASSED               [ 38%]
+tests/test_automaton.py::test_repeat_triggers_halt_at_second_repetition PASSED [ 46%]
+tests/test_automaton.py::test_max_theoretical_configurations PASSED      [ 53%]
+tests/test_middleware.py::test_solvable_agent_returns_success PASSED     [ 61%]
+tests/test_middleware.py::test_impossible_agent_gets_halted PASSED       [ 69%]
+tests/test_middleware.py::test_no_guardrail_runs_to_cap PASSED           [ 76%]
+tests/test_tape.py::test_append_keeps_recent_history_only PASSED         [ 84%]
+tests/test_tape.py::test_snapshot_is_immutable_and_hashable PASSED       [ 92%]
+tests/test_tape.py::test_identical_history_produces_equal_snapshots PASSED [100%]
+
+============================= 13 passed in 0.88s ==============================
