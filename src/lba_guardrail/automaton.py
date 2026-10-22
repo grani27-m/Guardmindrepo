@@ -21,7 +21,7 @@ class LBAGuardrail:
 
         if config in self.seen_configurations:
             self.halted = True
-            self.halt_reason = "Repeated (state, tape) configuration detected; infinite loop proven."
+            self.halt_reason = "Repeated recorded (state, tape) configuration detected."
             return False
 
         self.seen_configurations.add(config)
