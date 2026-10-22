@@ -1,0 +1,11 @@
+langchain
+langchain-groq
+python-dotenv
+pytest
+matplotlib
+pandas
+streamlit
+fastapi
+uvicorn
+flask
+flask-cors

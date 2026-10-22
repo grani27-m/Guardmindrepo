@@ -1,0 +1,44 @@
+# ── Python ──────────────────────────────────────────────
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# ── Secrets / credentials ────────────────────────────────
+.env
+*.env.*
+!.env.example
+
+# ── Test / coverage ──────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+pytest-results.log
+test-results.txt
+
+# ── Notebooks ────────────────────────────────────────────
+.ipynb_checkpoints/
+
+# ── IDE / OS ─────────────────────────────────────────────
+.vscode/
+.idea/
+*.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Large binary files ───────────────────────────────────
+*.docx
+*.zip
+*.pdf
+
+# ── Keep report_assets CSV and PNG (evidence) ────────────
+!report_assets/
+!report_assets/**

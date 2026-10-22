@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GuardMind — LBA Agent Guardrail</title>
+  <meta name="description" content="An AI assistant protected by a Linear Bounded Automaton guardrail that prevents infinite loops — a Theory of Computation demonstration." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-base:    #0D1117;
+      --bg-surface: #161B22;
+      --bg-card:    #1C2333;
+      --bg-input:   #21262D;
+      --accent:     #00D4AA;
+      --accent-dim: rgba(0,212,170,.12);
+      --accent-glow:rgba(0,212,170,.25);
+      --warn:       #F59E0B;
+      --warn-dim:   rgba(245,158,11,.12);
+      --danger:     #EF4444;
+      --success:    #10B981;
+      --text-primary:   #E6EDF3;
+      --text-secondary: #8B949E;
+      --text-muted:     #484F58;
+      --border:     rgba(255,255,255,.08);
+      --border-accent: rgba(0,212,170,.3);
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg-base);
+      color: var(--text-primary);
+      font-family: 'Inter', sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    /* ─── Layout ─── */
+    .layout {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      height: 100vh;
+    }
+
+    /* ─── Sidebar ─── */
+    .sidebar {
+      background: var(--bg-surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 20px 16px;
+      gap: 8px;
+    }
+
+    .sidebar-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      margin-bottom: 12px;
+    }
+
+    .logo-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--accent), #0099ff);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      box-shadow: 0 0 20px var(--accent-glow);
+      flex-shrink: 0;
+    }
+
+    .logo-text { font-weight: 600; font-size: 16px; }
+    .logo-sub  { font-size: 11px; color: var(--text-secondary); }
+
+    .sidebar-section-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: .08em;
+      padding: 12px 12px 4px;
+    }
+
+    .sidebar-btn {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 12px; border-radius: 8px;
+      border: none; background: transparent;
+      color: var(--text-secondary); cursor: pointer;
+      font-size: 13.5px; font-family: inherit;
+      transition: background .15s, color .15s;
+      text-align: left;
+      width: 100%;
+    }
+    .sidebar-btn:hover { background: var(--bg-card); color: var(--text-primary); }
+    .sidebar-btn.active {
+      background: var(--accent-dim);
+      color: var(--accent);
+      border: 1px solid var(--border-accent);
+    }
+    .sidebar-btn .dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--text-muted);
+      flex-shrink: 0;
+    }
+    .sidebar-btn.active .dot { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+
+    .sidebar-divider {
+      border: none; border-top: 1px solid var(--border);
+      margin: 8px 0;
+    }
+
+    .toc-badge {
+      margin-top: auto;
+      background: var(--accent-dim);
+      border: 1px solid var(--border-accent);
+      border-radius: 10px;
+      padding: 12px;
+    }
+    .toc-badge h4 { font-size: 12px; color: var(--accent); margin-bottom: 6px; }
+    .toc-badge p  { font-size: 11.5px; color: var(--text-secondary); line-height: 1.5; }
+
+    /* ─── Main chat area ─── */
+    .main {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .topbar {
+      padding: 14px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      background: rgba(13,17,23,.7);
+      backdrop-filter: blur(10px);
+    }
+    .topbar-title { font-weight: 500; font-size: 14.5px; }
+    .topbar-status {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12.5px; color: var(--text-secondary);
+    }
+    .status-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 6px var(--success);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+
+    /* ─── Messages ─── */
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      scroll-behavior: smooth;
+    }
+    .messages::-webkit-scrollbar { width: 6px; }
+    .messages::-webkit-scrollbar-track { background: transparent; }
+    .messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* Welcome state */
+    .welcome {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; flex: 1; gap: 20px; text-align: center;
+      padding: 40px;
+    }
+    .welcome-icon {
+      width: 64px; height: 64px;
+      background: linear-gradient(135deg, var(--accent), #0099ff);
+      border-radius: 18px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px;
+      box-shadow: 0 0 40px var(--accent-glow);
+    }
+    .welcome h2 { font-size: 24px; font-weight: 500; }
+    .welcome p  { color: var(--text-secondary); max-width: 420px; }
+    .suggestion-chips {
+      display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
+      margin-top: 8px;
+    }
+    .chip {
+      padding: 7px 14px; border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--bg-surface);
+      color: var(--text-secondary); font-size: 13px;
+      cursor: pointer; transition: all .2s;
+    }
+    .chip:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+
+    /* Message row */
+    .msg-row {
+      display: flex; gap: 12px; align-items: flex-start;
+      animation: slideUp .25s ease;
+    }
+    @keyframes slideUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+    .msg-row.user { flex-direction: row-reverse; }
+
+    .avatar {
+      width: 34px; height: 34px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; flex-shrink: 0;
+    }
+    .avatar.agent {
+      background: linear-gradient(135deg, var(--accent), #0099ff);
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+    .avatar.user { background: var(--bg-card); border: 1px solid var(--border); }
+
+    .bubble {
+      max-width: 72%; padding: 12px 16px; border-radius: 14px;
+      font-size: 14.5px; line-height: 1.65;
+    }
+    .bubble.agent {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 4px;
+    }
+    .bubble.user {
+      background: var(--accent-dim);
+      border: 1px solid var(--border-accent);
+      border-bottom-right-radius: 4px;
+      color: var(--text-primary);
+    }
+    .bubble.success-msg {
+      border-color: rgba(16,185,129,.35);
+      background: rgba(16,185,129,.08);
+    }
+
+    /* Guardrail halted card */
+    .guardrail-card {
+      background: linear-gradient(135deg, rgba(245,158,11,.1), rgba(239,68,68,.08));
+      border: 1px solid rgba(245,158,11,.4);
+      border-radius: 14px; padding: 16px 18px;
+      max-width: 72%;
+      animation: slideUp .3s ease;
+    }
+    .guardrail-header {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 10px;
+    }
+    .guardrail-header .icon { font-size: 18px; }
+    .guardrail-header h4 {
+      font-size: 13.5px; font-weight: 600;
+      color: var(--warn);
+    }
+    .guardrail-header .badge {
+      margin-left: auto;
+      font-size: 10.5px; font-weight: 600;
+      background: rgba(245,158,11,.2);
+      color: var(--warn);
+      padding: 2px 8px; border-radius: 10px;
+    }
+    .guardrail-text { font-size: 13.5px; color: var(--text-secondary); margin-bottom: 12px; }
+
+    /* TOC panel inside guardrail card */
+    .toc-panel {
+      background: rgba(0,0,0,.25);
+      border: 1px solid var(--border);
+      border-radius: 10px; padding: 12px 14px;
+    }
+    .toc-panel h5 {
+      font-size: 11.5px; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: .06em;
+      margin-bottom: 8px;
+    }
+    .tape-vis {
+      display: flex; gap: 4px; margin-bottom: 10px; flex-wrap: wrap;
+    }
+    .tape-cell {
+      padding: 4px 10px; border-radius: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11.5px;
+      background: rgba(245,158,11,.15);
+      border: 1px solid rgba(245,158,11,.3);
+      color: var(--warn);
+    }
+    .toc-stats {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+    }
+    .toc-stat { text-align: center; }
+    .toc-stat .val {
+      font-size: 18px; font-weight: 600; color: var(--warn);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .toc-stat .lbl { font-size: 10.5px; color: var(--text-muted); }
+
+    /* Step trace (expandable) */
+    .step-trace-toggle {
+      margin-top: 10px;
+      background: none; border: none;
+      color: var(--text-secondary); font-size: 12.5px;
+      cursor: pointer; font-family: inherit;
+      display: flex; align-items: center; gap: 4px;
+    }
+    .step-trace-toggle:hover { color: var(--text-primary); }
+    .step-trace {
+      margin-top: 8px; display: none;
+      background: rgba(0,0,0,.3);
+      border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px 12px;
+      max-height: 200px; overflow-y: auto;
+    }
+    .step-trace.open { display: block; }
+    .step-trace-row {
+      font-size: 12px; font-family: 'JetBrains Mono', monospace;
+      color: var(--text-secondary); padding: 2px 0;
+      border-bottom: 1px solid rgba(255,255,255,.04);
+    }
+    .step-trace-row:last-child { border: none; }
+    .step-trace-row .s-num { color: var(--text-muted); margin-right: 8px; }
+    .step-trace-row .s-obs { color: var(--warn); }
+    .step-trace-row .s-ok  { color: var(--success); }
+
+    /* Typing indicator */
+    .typing { display: flex; align-items: center; gap: 4px; padding: 6px 0; }
+    .typing span {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--text-muted);
+      animation: blink 1.4s infinite;
+    }
+    .typing span:nth-child(2) { animation-delay: .2s; }
+    .typing span:nth-child(3) { animation-delay: .4s; }
+    @keyframes blink { 0%,80%,100%{opacity:.3} 40%{opacity:1} }
+
+    /* ─── Input area ─── */
+    .input-area {
+      padding: 16px 24px 20px;
+      background: var(--bg-base);
+      border-top: 1px solid var(--border);
+    }
+    .input-wrapper {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 14px; padding: 10px 14px;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .input-wrapper:focus-within {
+      border-color: var(--border-accent);
+      box-shadow: 0 0 0 3px var(--accent-dim);
+    }
+    #query-input {
+      flex: 1; background: none; border: none; outline: none;
+      color: var(--text-primary); font-size: 14.5px;
+      font-family: inherit; resize: none; max-height: 120px;
+      line-height: 1.5;
+    }
+    #query-input::placeholder { color: var(--text-muted); }
+    #send-btn {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: var(--accent);
+      border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; flex-shrink: 0;
+      transition: background .2s, box-shadow .2s, transform .1s;
+    }
+    #send-btn:hover { background: #00bfa3; box-shadow: 0 0 14px var(--accent-glow); }
+    #send-btn:active { transform: scale(.92); }
+    #send-btn:disabled { background: var(--text-muted); cursor: not-allowed; }
+    .input-hint { font-size: 11.5px; color: var(--text-muted); text-align: center; margin-top: 8px; }
+    .input-hint span { color: var(--text-secondary); }
+  </style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- ─── Sidebar ─── -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">🛡️</div>
+      <div>
+        <div class="logo-text">GuardMind</div>
+        <div class="logo-sub">LBA Agent Guardrail</div>
+      </div>
+    </div>
+
+    <div class="sidebar-section-label">CONVERSATIONS</div>
+    <button class="sidebar-btn active" id="btn-chat">
+      <span class="dot"></span>
+      Product Lookup Agent
+    </button>
+
+    <hr class="sidebar-divider">
+
+    <div class="sidebar-section-label">ABOUT THIS DEMO</div>
+    <button class="sidebar-btn" onclick="showInfo('lba')">
+      <span>⚙️</span> What is LBA Guardrail?
+    </button>
+    <button class="sidebar-btn" onclick="showInfo('toc')">
+      <span>📐</span> Theory of Computation
+    </button>
+    <button class="sidebar-btn" onclick="showInfo('pigeonhole')">
+      <span>🕊️</span> Pigeonhole Principle
+    </button>
+
+    <hr class="sidebar-divider">
+
+    <div class="sidebar-section-label">KNOWN ITEMS</div>
+    <div id="known-items-list" style="padding: 4px 12px; font-size:12px; color:var(--text-secondary); font-family:'JetBrains Mono',monospace; line-height:1.8;"></div>
+
+    <div class="toc-badge">
+      <h4>TOC Project — Phase 3</h4>
+      <p>This agent is protected by a finite-state LBA. Infinite loops are proven mathematically impossible to hide from the Pigeonhole Principle.</p>
+    </div>
+  </aside>
+
+  <!-- ─── Main ─── -->
+  <main class="main">
+    <div class="topbar">
+      <span class="topbar-title">Product Lookup Agent</span>
+      <div class="topbar-status">
+        <div class="status-dot"></div>
+        <span>Guardrail active · tape_length = 4</span>
+      </div>
+    </div>
+
+    <div class="messages" id="messages">
+      <!-- Welcome screen injected by JS -->
+    </div>
+
+    <div class="input-area">
+      <div class="input-wrapper">
+        <textarea id="query-input" rows="1" placeholder="Ask me anything, or say: find product-101"></textarea>
+        <button id="send-btn" title="Send">➤</button>
+      </div>
+      <p class="input-hint">Chat freely — or try <span>find product-101</span> (success) · <span>search for xyz-999</span> (loop → guardrail fires)</p>
+    </div>
+  </main>
+</div>
+
+<script>
+const API = "http://localhost:5050";
+const messagesEl = document.getElementById("messages");
+const inputEl    = document.getElementById("query-input");
+const sendBtn    = document.getElementById("send-btn");
+const chatHistory = [];  // {user, assistant}
+
+// ── Load known items ──
+fetch(`${API}/api/known_items`)
+  .then(r => r.json())
+  .then(d => {
+    document.getElementById("known-items-list").textContent = d.items.join("\n");
+  }).catch(() => {});
+
+// ── Welcome screen ──
+function showWelcome() {
+  messagesEl.innerHTML = `
+    <div class="welcome" id="welcome-pane">
+      <div class="welcome-icon">🛡️</div>
+      <h2>GuardMind is ready</h2>
+      <p>I'm a real AI assistant. Ask me anything — greetings, explanations, code help, general knowledge. I also have a product lookup tool guarded by a <strong>Linear Bounded Automaton</strong>. If a search loops forever, the guardrail stops it with a mathematical proof.</p>
+      <div class="suggestion-chips">
+        <button class="chip" onclick="sendQuery('Hi! What can you do?')">Say hi 👋</button>
+        <button class="chip" onclick="sendQuery('find product-101')">Find product-101</button>
+        <button class="chip" onclick="sendQuery('search for xyz-999')">Search unknown item</button>
+        <button class="chip" onclick="sendQuery('explain the Pigeonhole Principle')">Explain Pigeonhole</button>
+        <button class="chip" onclick="sendQuery('what is a Linear Bounded Automaton?')">What is an LBA?</button>
+      </div>
+    </div>`;
+}
+showWelcome();
+
+// ── Sidebar info panels ──
+const infoMessages = {
+  lba: "The **LBA Guardrail** wraps around the AI agent. At each step, it records the agent's (state, tape) configuration. By the Pigeonhole Principle, if configurations are finite and one repeats — the agent is provably stuck in an infinite loop. The guardrail halts it before it wastes resources.",
+  toc: "This project applies **Theory of Computation** concepts: the bounded tape is a finite memory alphabet, the agent's state transitions form a finite automaton, and the repeat-configuration detection is equivalent to deciding membership in a regular language. The guardrail IS a finite automaton.",
+  pigeonhole: "The **Pigeonhole Principle** guarantees that if there are N possible (state, tape) configurations and the agent runs more than N steps without succeeding, at least one configuration repeats — proving an infinite loop. We don't need to run forever to detect it."
+};
+
+function showInfo(key) {
+  removeWelcome();
+  appendAgentBubble(infoMessages[key].replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'), false);
+}
+
+function removeWelcome() {
+  const w = document.getElementById("welcome-pane");
+  if (w) w.parentElement.removeChild(w);
+}
+
+// ── Send query ──
+function sendQuery(text) {
+  inputEl.value = text;
+  doSend();
+}
+
+async function doSend() {
+  const query = inputEl.value.trim();
+  if (!query) return;
+
+  removeWelcome();
+  inputEl.value = "";
+  inputEl.style.height = "auto";
+  sendBtn.disabled = true;
+
+  appendUserBubble(query);
+  const typingEl = appendTyping();
+
+  try {
+    const res = await fetch(`${API}/api/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query, history: chatHistory.slice(-6) })
+    });
+    const data = await res.json();
+    typingEl.remove();
+    const replyText = renderResponse(data);
+    // save to history for context
+    chatHistory.push({ user: query, assistant: replyText || data.reply || "" });
+  } catch (err) {
+    typingEl.remove();
+    appendAgentBubble(`⚠️ Could not reach the backend. Make sure <code>chat_server.py</code> is running on port 5050.`, false);
+  } finally {
+    sendBtn.disabled = false;
+    inputEl.focus();
+  }
+}
+
+// ── Render agent response ──
+function renderResponse(data) {
+  if (data.type === "guardrail" || data.halted_by_lba) {
+    renderGuardrailCard(data);
+    return data.reply;
+  } else if (data.type === "lookup_success") {
+    const txt = data.reply;
+    appendAgentBubble(txt.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'), true);
+    return txt;
+  } else {
+    // plain chat response — render markdown bold
+    const html = escHtml(data.reply)
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\n/g, '<br>');
+    appendAgentBubble(html, false);
+    return data.reply;
+  }
+}
+
+function renderGuardrailCard(data) {
+  const lastTape = data.steps.length > 0 ? data.steps[data.steps.length - 1].tape : [];
+  const configsSeen = data.steps.length > 0 ? data.steps[data.steps.length - 1].configs_seen : 0;
+
+  const tapeCells = (lastTape || []).map(t =>
+    `<div class="tape-cell">${t}</div>`).join("");
+
+  const traceRows = data.steps.map(s =>
+    `<div class="step-trace-row">
+       <span class="s-num">step ${String(s.step).padStart(2,'0')}</span>
+       <span>${s.display}</span>
+       <span class="s-obs"> → ${s.observation}</span>
+     </div>`).join("");
+
+  const row = document.createElement("div");
+  row.className = "msg-row";
+  row.innerHTML = `
+    <div class="avatar agent">🛡️</div>
+    <div class="guardrail-card">
+      <div class="guardrail-header">
+        <span class="icon">⚠️</span>
+        <h4>LBA Guardrail Intervened</h4>
+        <span class="badge">LOOP PROVEN</span>
+      </div>
+      <p class="guardrail-text">
+        I tried to look up <strong>"${data.query}"</strong> ${data.steps_taken} times.
+        My guardrail detected that I was repeating the same internal configuration —
+        an infinite loop was mathematically proven by the Pigeonhole Principle.
+        I stopped to avoid wasting further resources.
+      </p>
+      <div class="toc-panel">
+        <h5>TOC — Linear Bounded Automaton State</h5>
+        <div class="tape-vis">${tapeCells || '<span style="color:var(--text-muted);font-size:12px">tape empty</span>'}</div>
+        <div class="toc-stats">
+          <div class="toc-stat">
+            <div class="val">${data.steps_taken}</div>
+            <div class="lbl">Steps taken</div>
+          </div>
+          <div class="toc-stat">
+            <div class="val">${configsSeen || '–'}</div>
+            <div class="lbl">Configs seen</div>
+          </div>
+          <div class="toc-stat">
+            <div class="val">4</div>
+            <div class="lbl">Tape length</div>
+          </div>
+        </div>
+      </div>
+      <button class="step-trace-toggle" onclick="toggleTrace(this)">▶ Show step-by-step trace</button>
+      <div class="step-trace">${traceRows}</div>
+    </div>`;
+  messagesEl.appendChild(row);
+  scrollToBottom();
+}
+
+function toggleTrace(btn) {
+  const trace = btn.nextElementSibling;
+  trace.classList.toggle("open");
+  btn.textContent = trace.classList.contains("open")
+    ? "▼ Hide trace" : "▶ Show step-by-step trace";
+}
+
+// ── Helpers ──
+function appendUserBubble(text) {
+  const row = document.createElement("div");
+  row.className = "msg-row user";
+  row.innerHTML = `
+    <div class="avatar user">👤</div>
+    <div class="bubble user">${escHtml(text)}</div>`;
+  messagesEl.appendChild(row);
+  scrollToBottom();
+}
+
+function appendAgentBubble(html, isSuccess) {
+  const row = document.createElement("div");
+  row.className = "msg-row";
+  row.innerHTML = `
+    <div class="avatar agent">🛡️</div>
+    <div class="bubble agent ${isSuccess ? 'success-msg' : ''}">${html}</div>`;
+  messagesEl.appendChild(row);
+  scrollToBottom();
+}
+
+function appendTyping() {
+  const row = document.createElement("div");
+  row.className = "msg-row";
+  row.innerHTML = `
+    <div class="avatar agent">🛡️</div>
+    <div class="bubble agent"><div class="typing"><span></span><span></span><span></span></div></div>`;
+  messagesEl.appendChild(row);
+  scrollToBottom();
+  return row;
+}
+
+function scrollToBottom() {
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function escHtml(t) {
+  return t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+// ── Keyboard ──
+inputEl.addEventListener("keydown", e => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    doSend();
+  }
+});
+inputEl.addEventListener("input", () => {
+  inputEl.style.height = "auto";
+  inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + "px";
+});
+sendBtn.addEventListener("click", doSend);
+</script>
+</body>
+</html>
